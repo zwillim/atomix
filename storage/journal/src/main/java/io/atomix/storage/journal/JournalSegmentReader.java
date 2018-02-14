@@ -76,6 +76,95 @@ public class JournalSegmentReader<E> implements JournalReader<E> {
   }
 
   @Override
+  public boolean locateFirst(JournalEntryLocator<E> locator) {
+    long lo = firstIndex;
+    long hi = getCurrentIndex();
+
+    reset(lo);
+
+    while (lo < hi) {
+      long mid = lo + (hi - lo) / 2;
+      reset(mid);
+      Indexed<E> next = next();
+      int i = locator.locate(next);
+      if (i < 0) {
+        hi = mid - 1;
+      } else if (i > 0) {
+        lo = mid;
+      } else {
+        reset(lo);
+        while (hasNext()) {
+          next = next();
+          if (locator.locate(next) == 0) {
+            reset(next.index());
+            return true;
+          }
+        }
+      }
+    }
+
+    reset();
+    while (hasNext()) {
+      Indexed<E> next = next();
+      if (locator.locate(next) == 0) {
+        reset(next.index());
+        return true;
+      }
+    }
+    return false;
+  }
+
+  @Override
+  public boolean locateLast(JournalEntryLocator<E> locator) {
+    long lo = firstIndex;
+    long hi = getCurrentIndex();
+
+    reset(lo);
+
+    while (lo < hi) {
+      long mid = lo + (hi - lo) / 2;
+      reset(mid);
+      Indexed<E> next = next();
+      int i = locator.locate(next);
+      if (i < 0) {
+        hi = mid - 1;
+      } else if (i > 0) {
+        lo = mid;
+      } else if (hasNext()) {
+        next = next();
+        if (locator.locate(next) == 0) {
+          lo = mid;
+        } else {
+          reset(next.index());
+          return true;
+        }
+      } else {
+        return false;
+      }
+    }
+
+    reset();
+
+    Indexed<E> next = next();
+    boolean matched = false;
+    if (locator.locate(next) == 0) {
+      matched = true;
+    }
+
+    while (hasNext()) {
+      next = next();
+      int match = locator.locate(next);
+      if (match == 0) {
+        matched = true;
+      } else if (matched && match == 1) {
+        reset(next.index());
+        return true;
+      }
+    }
+    return locator.locate(next) == 0;
+  }
+
+  @Override
   public boolean hasNext() {
     // If the next entry is null, check whether a next entry exists.
     if (nextEntry == null) {

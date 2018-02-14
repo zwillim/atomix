@@ -123,7 +123,7 @@ public class RaftPerformanceTest implements Runnable {
 
   private static final int ITERATIONS = 1;
 
-  private static final int TOTAL_OPERATIONS = 1000000;
+  private static final int TOTAL_OPERATIONS = 100000;
   private static final int WRITE_RATIO = 10;
   private static final int NUM_CLIENTS = 5;
 
@@ -266,7 +266,7 @@ public class RaftPerformanceTest implements Runnable {
     System.out.println(String.format("averageRunTime: %dms", averageRunTime));
 
     try {
-      shutdown();
+      //shutdown();
     } catch (Exception e) {
       e.printStackTrace();
     }
@@ -457,13 +457,12 @@ public class RaftPerformanceTest implements Runnable {
 
     RaftServer.Builder builder = RaftServer.newBuilder(memberId)
         .withProtocol(protocol)
-        .withThreadModel(ThreadModel.THREAD_PER_SERVICE)
+        .withThreadModel(ThreadModel.SHARED_THREAD_POOL)
         .withStorage(RaftStorage.newBuilder()
-            .withStorageLevel(StorageLevel.MAPPED)
+            .withStorageLevel(StorageLevel.DISK)
             .withDirectory(new File(String.format("target/perf-logs/%s", memberId)))
             .withSerializer(storageSerializer)
-            .withMaxEntriesPerSegment(32768)
-            .withMaxSegmentSize(1024 * 1024)
+            .withMaxSegmentSize(1024 * 1024 * 64)
             .build())
         .addService("test", PerformanceStateMachine::new);
 

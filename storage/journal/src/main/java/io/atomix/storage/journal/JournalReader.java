@@ -73,6 +73,20 @@ public interface JournalReader<E> extends Iterator<Indexed<E>>, AutoCloseable {
    */
   void reset(long index);
 
+  /**
+   * Resets the reader to the first index for which the provided function returns a {@code 0}.
+   *
+   * @param locator the function with which to navigate the journal
+   */
+  boolean locateFirst(JournalEntryLocator<E> locator);
+
+  /**
+   * Resets the reader to the last index for which the provided function returns a {@code 0}.
+   *
+   * @param locator the function with which to navigate the journal
+   */
+  boolean locateLast(JournalEntryLocator<E> locator);
+
   @Override
   void close();
 }

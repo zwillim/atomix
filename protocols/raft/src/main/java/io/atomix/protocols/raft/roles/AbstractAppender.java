@@ -32,6 +32,7 @@ import io.atomix.protocols.raft.storage.log.entry.RaftLogEntry;
 import io.atomix.protocols.raft.storage.snapshot.Snapshot;
 import io.atomix.protocols.raft.storage.snapshot.SnapshotReader;
 import io.atomix.storage.journal.Indexed;
+import io.atomix.storage.journal.JournalEntryLocator;
 import io.atomix.utils.logging.ContextualLoggerFactory;
 import io.atomix.utils.logging.LoggerContext;
 import org.slf4j.Logger;
@@ -243,7 +244,7 @@ abstract class AbstractAppender implements AutoCloseable {
     // us converge on the matchIndex faster than by simply decrementing nextIndex one index at a time.
     else {
       resetMatchIndex(member, response);
-      resetNextIndex(member, response);
+      resetNextIndex(member, request, response);
 
       // If there are more entries to send then attempt to send another commit.
       if (response.lastLogIndex() != request.prevLogIndex() && hasMoreEntries(member)) {
@@ -312,12 +313,27 @@ abstract class AbstractAppender implements AutoCloseable {
   /**
    * Resets the next index when a response fails.
    */
-  protected void resetNextIndex(RaftMemberContext member, AppendResponse response) {
-    long nextIndex = response.lastLogIndex() + 1;
-    if (member.getLogReader().getNextIndex() != nextIndex) {
-      member.getLogReader().reset(nextIndex);
-      log.trace("Reset next index for {} to {}", member, nextIndex);
+  protected void resetNextIndex(RaftMemberContext member, AppendRequest request, AppendResponse response) {
+    RaftLogReader reader = member.getLogReader();
+    if (response.lastLogTerm() > 0 && reader.hasNext()) {
+      JournalEntryLocator<RaftLogEntry> locator = entry -> {
+        if (entry.index() >= request.prevLogIndex()) {
+          return 1;
+        } else if (entry.entry().term() == response.lastLogTerm()) {
+          return 0;
+        } else if (entry.entry().term() < response.lastLogTerm()) {
+          return -1;
+        } else {
+          return 1;
+        }
+      };
+      if (!reader.locateLast(locator)) {
+        reader.reset(response.lastLogIndex());
+      }
+    } else {
+      reader.reset(response.lastLogIndex() + 1);
     }
+    log.trace("Reset next index for {} to {}", member, reader.getNextIndex());
   }
 
   /**

@@ -45,6 +45,7 @@ import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashSet;
 
 import static org.junit.Assert.assertEquals;
@@ -390,6 +391,66 @@ public abstract class AbstractLogTest {
     assertTrue(committedReader.hasNext());
     assertEquals(MAX_ENTRIES_PER_SEGMENT * 5 + 1, committedReader.getNextIndex());
     assertEquals(MAX_ENTRIES_PER_SEGMENT * 5 + 1, committedReader.next().index());
+  }
+
+  @Test
+  public void testLocateFirst() throws Exception {
+    for (int i = 10; i <= 30; i++) {
+      RaftLog log = createLog();
+      RaftLogWriter writer = log.writer();
+      RaftLogReader reader = log.openReader(1);
+
+      for (int j = 1; j <= i; j++) {
+        writer.append(new TestEntry(1, 32));
+        assertEquals(1, reader.next().entry().term());
+      }
+
+      for (int j = 1; j <= i; j++) {
+        writer.append(new TestEntry(2, 32));
+        assertEquals(2, reader.next().entry().term());
+      }
+
+      for (int j = 1; j <= i; j++) {
+        writer.append(new TestEntry(3, 32));
+        assertEquals(3, reader.next().entry().term());
+      }
+
+      assertTrue(reader.locateFirst(e -> e.entry().term() == 2 ? 0 : e.entry().term() < 2 ? -1 : 1));
+
+      assertEquals(i + 1, reader.getNextIndex());
+
+      cleanupStorage();
+    }
+  }
+
+  @Test
+  public void testLocateLast() throws Exception {
+    for (int i = 10; i <= 30; i++) {
+      RaftLog log = createLog();
+      RaftLogWriter writer = log.writer();
+      RaftLogReader reader = log.openReader(1);
+
+      for (int j = 1; j <= i; j++) {
+        writer.append(new TestEntry(1, 32));
+        assertEquals(1, reader.next().entry().term());
+      }
+
+      for (int j = 1; j <= i; j++) {
+        writer.append(new TestEntry(2, 32));
+        assertEquals(2, reader.next().entry().term());
+      }
+
+      for (int j = 1; j <= i; j++) {
+        writer.append(new TestEntry(3, 32));
+        assertEquals(3, reader.next().entry().term());
+      }
+
+      assertTrue(reader.locateLast(e -> e.entry().term() == 2 ? 0 : e.entry().term() < 2 ? -1 : 1));
+
+      assertEquals(i * 2 + 1, reader.getNextIndex());
+
+      cleanupStorage();
+    }
   }
 
   @Before

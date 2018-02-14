@@ -105,6 +105,90 @@ public class SegmentedJournalReader<E> implements JournalReader<E> {
     }
   }
 
+  @Override
+  public boolean locateFirst(JournalEntryLocator<E> locator) {
+    JournalSegment<E> segment = locateFirstSegment(locator);
+    if (segment != null) {
+      currentReader.close();
+      currentSegment = segment;
+      currentReader = currentSegment.createReader();
+      if (currentReader.locateFirst(locator)) {
+        return true;
+      }
+
+      if (hasNext()) {
+        Indexed<E> entry = next();
+        if (locator.locate(entry) == 0) {
+          reset(entry.index());
+          return true;
+        }
+      }
+      return false;
+    } else {
+      reset();
+      return false;
+    }
+  }
+
+  @Override
+  public boolean locateLast(JournalEntryLocator<E> locator) {
+    JournalSegment<E> segment = locateLastSegment(locator);
+    if (segment != null) {
+      currentReader.close();
+      currentSegment = segment;
+      currentReader = currentSegment.createReader();
+      return currentReader.locateLast(locator);
+    } else {
+      reset();
+      return false;
+    }
+  }
+
+  /**
+   * Locates the first segment in the log potentially containing a match for the given entry locator.
+   *
+   * @param locator the entry locator with which to match entries
+   * @return the first segment in the journal potentially containing a match for the given entry locator
+   */
+  private JournalSegment<E> locateFirstSegment(JournalEntryLocator<E> locator) {
+    return locateSegment(locator, false);
+  }
+
+  /**
+   * Locates the last segment in the log potentially containing a match for the given entry locator.
+   *
+   * @param locator the entry locator with which to match entries
+   * @return the last segment in the journal potentially containing a match for the given entry locator
+   */
+  private JournalSegment<E> locateLastSegment(JournalEntryLocator<E> locator) {
+    return locateSegment(locator, true);
+  }
+
+  /**
+   * Locates the first segment in the log potentially containing a match for the given entry locator.
+   *
+   * @param locator the entry locator with which to match entries
+   * @return the first segment in the journal potentially containing a match for the given entry locator
+   */
+  private JournalSegment<E> locateSegment(JournalEntryLocator<E> locator, boolean last) {
+    JournalSegment<E> matchedSegment = null;
+    for (JournalSegment<E> segment : journal.getSegments()) {
+      try (JournalSegmentReader<E> reader = segment.createReader()) {
+        if (reader.hasNext()) {
+          Indexed<E> firstEntry = reader.next();
+          if (!last && locator.locate(firstEntry) < 0) {
+            matchedSegment = segment;
+          } else if (last && locator.locate(firstEntry) <= 0) {
+            matchedSegment = segment;
+          } else {
+            return matchedSegment;
+          }
+        }
+      }
+    }
+    return null;
+  }
+
   /**
    * Rewinds the journal to the given index.
    */

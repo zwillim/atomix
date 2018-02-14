@@ -39,12 +39,14 @@ public class AppendResponse extends AbstractRaftResponse {
   private final long term;
   private final boolean succeeded;
   private final long lastLogIndex;
+  private final long lastLogTerm;
 
-  public AppendResponse(Status status, RaftError error, long term, boolean succeeded, long lastLogIndex) {
+  public AppendResponse(Status status, RaftError error, long term, boolean succeeded, long lastLogIndex, long lastLogTerm) {
     super(status, error);
     this.term = term;
     this.succeeded = succeeded;
     this.lastLogIndex = lastLogIndex;
+    this.lastLogTerm = lastLogTerm;
   }
 
   /**
@@ -74,6 +76,15 @@ public class AppendResponse extends AbstractRaftResponse {
     return lastLogIndex;
   }
 
+  /**
+   * Returns the last term of the replicat's log.
+   *
+   * @return the term of the last entry in the responding replica's log
+   */
+  public long lastLogTerm() {
+    return lastLogTerm;
+  }
+
   @Override
   public int hashCode() {
     return Objects.hash(getClass(), status, term, succeeded, lastLogIndex);
@@ -99,6 +110,7 @@ public class AppendResponse extends AbstractRaftResponse {
           .add("term", term)
           .add("succeeded", succeeded)
           .add("lastLogIndex", lastLogIndex)
+          .add("lastLogTerm", lastLogTerm)
           .toString();
     } else {
       return toStringHelper(this)
@@ -115,6 +127,7 @@ public class AppendResponse extends AbstractRaftResponse {
     private long term;
     private boolean succeeded;
     private long lastLogIndex;
+    private long lastLogTerm;
 
     /**
      * Sets the response term.
@@ -153,12 +166,26 @@ public class AppendResponse extends AbstractRaftResponse {
       return this;
     }
 
+    /**
+     * Sets the last entry's term of the replica's log.
+     *
+     * @param lastLogTerm the term of the last entry
+     * @return the append response builder
+     * @throws IllegalArgumentException if the last term is negative
+     */
+    public Builder withLastLogTerm(long lastLogTerm) {
+      checkArgument(lastLogTerm >= 0, "lastLogTerm must be positive");
+      this.lastLogTerm = lastLogTerm;
+      return this;
+    }
+
     @Override
     protected void validate() {
       super.validate();
       if (status == Status.OK) {
         checkArgument(term > 0, "term must be positive");
         checkArgument(lastLogIndex >= 0, "lastLogIndex must be positive");
+        checkArgument(lastLogTerm >= 0, "lastLogTerm must be positive");
       }
     }
 
@@ -168,7 +195,7 @@ public class AppendResponse extends AbstractRaftResponse {
     @Override
     public AppendResponse build() {
       validate();
-      return new AppendResponse(status, error, term, succeeded, lastLogIndex);
+      return new AppendResponse(status, error, term, succeeded, lastLogIndex, lastLogTerm);
     }
   }
 }

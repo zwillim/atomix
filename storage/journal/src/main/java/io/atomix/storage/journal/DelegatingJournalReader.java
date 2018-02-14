@@ -63,6 +63,16 @@ public class DelegatingJournalReader<E> implements JournalReader<E> {
   }
 
   @Override
+  public boolean locateFirst(JournalEntryLocator<E> locator) {
+    return delegate.locateFirst(locator);
+  }
+
+  @Override
+  public boolean locateLast(JournalEntryLocator<E> locator) {
+    return delegate.locateLast(locator);
+  }
+
+  @Override
   public void close() {
     delegate.close();
   }

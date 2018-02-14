@@ -254,6 +254,15 @@ public class SegmentedJournal<E> implements Journal<E> {
   }
 
   /**
+   * Returns the collection of log segments.
+   *
+   * @return the collection of log segments
+   */
+  Collection<JournalSegment<E>> getSegments() {
+    return segments.values();
+  }
+
+  /**
    * Returns the first segment in the log.
    *
    * @throws IllegalStateException if the segment manager is not open
