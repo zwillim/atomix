@@ -13,8 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package io.atomix.primitive;
 
 /**
- * Cached primitive configurations and builders.
+ * Concurrency definition.
  */
-package io.atomix.core.cache;
+public enum Concurrency {
+
+  /**
+   * Configures a primitive to execute serial.
+   */
+  SERIAL,
+
+  /**
+   * Configures a primitive to execute concurrently based on thread access.
+   */
+  CONCURRENT,
+}

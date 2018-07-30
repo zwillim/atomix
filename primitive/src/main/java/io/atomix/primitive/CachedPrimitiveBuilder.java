@@ -13,12 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.atomix.core.cache;
-
-import io.atomix.primitive.PrimitiveBuilder;
-import io.atomix.primitive.PrimitiveManagementService;
-import io.atomix.primitive.PrimitiveType;
-import io.atomix.primitive.SyncPrimitive;
+package io.atomix.primitive;
 
 /**
  * Cached distributed primitive builder.

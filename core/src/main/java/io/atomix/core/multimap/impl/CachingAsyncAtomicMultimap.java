@@ -20,7 +20,7 @@ import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.MoreExecutors;
-import io.atomix.core.cache.CacheConfig;
+import io.atomix.primitive.CacheConfig;
 import io.atomix.core.multimap.AsyncAtomicMultimap;
 import io.atomix.core.multimap.AtomicMultimapEventListener;
 import io.atomix.primitive.PrimitiveState;

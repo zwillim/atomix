@@ -16,7 +16,7 @@
 package io.atomix.core.map;
 
 import com.google.common.collect.Lists;
-import io.atomix.core.cache.CachedPrimitiveBuilder;
+import io.atomix.primitive.CachedPrimitiveBuilder;
 import io.atomix.primitive.PrimitiveManagementService;
 import io.atomix.primitive.PrimitiveType;
 import io.atomix.primitive.SyncPrimitive;

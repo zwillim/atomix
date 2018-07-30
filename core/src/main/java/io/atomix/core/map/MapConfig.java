@@ -15,7 +15,7 @@
  */
 package io.atomix.core.map;
 
-import io.atomix.core.cache.CachedPrimitiveConfig;
+import io.atomix.primitive.CachedPrimitiveConfig;
 
 import java.util.ArrayList;
 import java.util.List;

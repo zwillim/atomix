@@ -15,7 +15,7 @@
  */
 package io.atomix.core.set.impl;
 
-import io.atomix.core.cache.CacheConfig;
+import io.atomix.primitive.CacheConfig;
 import io.atomix.core.collection.impl.CachingAsyncDistributedCollection;
 import io.atomix.core.set.AsyncDistributedSet;
 import io.atomix.core.set.DistributedSet;

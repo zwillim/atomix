@@ -15,7 +15,7 @@
  */
 package io.atomix.core.queue.impl;
 
-import io.atomix.core.cache.CacheConfig;
+import io.atomix.primitive.CacheConfig;
 import io.atomix.core.collection.impl.CachingAsyncDistributedCollection;
 import io.atomix.core.queue.AsyncDistributedQueue;
 import io.atomix.core.queue.DistributedQueue;
