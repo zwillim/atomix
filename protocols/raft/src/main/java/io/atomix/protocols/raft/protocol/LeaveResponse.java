@@ -25,27 +25,15 @@ import java.util.Collection;
  */
 public class LeaveResponse extends ConfigurationResponse {
 
-  /**
-   * Returns a new leave response builder.
-   *
-   * @return A new leave response builder.
-   */
-  public static Builder builder() {
-    return new Builder();
+  public static LeaveResponse ok(long index, long term, long timestamp, Collection<RaftMember> members) {
+    return new LeaveResponse(Status.OK, null, index, term, timestamp, members);
   }
 
-  public LeaveResponse(Status status, RaftError error, long index, long term, long timestamp, Collection<RaftMember> members) {
+  public static LeaveResponse error(RaftError error) {
+    return new LeaveResponse(Status.ERROR, error, 0, 0, 0, null);
+  }
+
+  private LeaveResponse(Status status, RaftError error, long index, long term, long timestamp, Collection<RaftMember> members) {
     super(status, error, index, term, timestamp, members);
-  }
-
-  /**
-   * Leave response builder.
-   */
-  public static class Builder extends ConfigurationResponse.Builder<Builder, LeaveResponse> {
-    @Override
-    public LeaveResponse build() {
-      validate();
-      return new LeaveResponse(status, error, index, term, timestamp, members);
-    }
   }
 }

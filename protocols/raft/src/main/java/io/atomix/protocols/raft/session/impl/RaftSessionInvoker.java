@@ -106,11 +106,7 @@ final class RaftSessionInvoker {
    * Submits a command to the cluster.
    */
   private void invokeCommand(PrimitiveOperation operation, CompletableFuture<byte[]> future) {
-    CommandRequest request = CommandRequest.builder()
-        .withSession(state.getSessionId().id())
-        .withSequence(state.nextCommandRequest())
-        .withOperation(operation)
-        .build();
+    CommandRequest request = CommandRequest.request(state.getSessionId().hashCode(), state.nextCommandRequest(), operation);
     invokeCommand(request, future);
   }
 
@@ -125,12 +121,11 @@ final class RaftSessionInvoker {
    * Submits a query to the cluster.
    */
   private void invokeQuery(PrimitiveOperation operation, CompletableFuture<byte[]> future) {
-    QueryRequest request = QueryRequest.builder()
-        .withSession(state.getSessionId().id())
-        .withSequence(state.getCommandRequest())
-        .withOperation(operation)
-        .withIndex(Math.max(state.getResponseIndex(), state.getEventIndex()))
-        .build();
+    QueryRequest request = QueryRequest.request(
+        state.getSessionId().id(),
+        state.getCommandRequest(),
+        operation,
+        Math.max(state.getResponseIndex(), state.getEventIndex()));
     invokeQuery(request, future);
   }
 
@@ -159,11 +154,11 @@ final class RaftSessionInvoker {
   /**
    * Resubmits commands starting after the given sequence number.
    * <p>
-   * The sequence number from which to resend commands is the <em>request</em> sequence number,
-   * not the client-side sequence number. We resend only commands since queries cannot be reliably
-   * resent without losing linearizable semantics. Commands are resent by iterating through all pending
-   * operation attempts and retrying commands where the sequence number is greater than the given
-   * {@code commandSequence} number and the attempt number is less than or equal to the version.
+   * The sequence number from which to resend commands is the <em>request</em> sequence number, not the client-side
+   * sequence number. We resend only commands since queries cannot be reliably resent without losing linearizable
+   * semantics. Commands are resent by iterating through all pending operation attempts and retrying commands where the
+   * sequence number is greater than the given {@code commandSequence} number and the attempt number is less than or
+   * equal to the version.
    */
   private void resubmit(long commandSequence, OperationAttempt<?, ?> attempt) {
     // If the client's response sequence number is greater than the given command sequence number,

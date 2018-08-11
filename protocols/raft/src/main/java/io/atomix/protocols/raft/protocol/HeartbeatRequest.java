@@ -28,19 +28,15 @@ import static com.google.common.base.Preconditions.checkNotNull;
  */
 public class HeartbeatRequest extends AbstractRaftRequest {
 
-  /**
-   * Returns a new heartbeat request builder.
-   *
-   * @return A new heartbeat request builder.
-   */
-  public static Builder builder() {
-    return new Builder();
+  public static HeartbeatRequest request(MemberId leader, Collection<MemberId> members) {
+    return new HeartbeatRequest(leader, members);
   }
 
   private final MemberId leader;
   private final Collection<MemberId> members;
 
-  public HeartbeatRequest(MemberId leader, Collection<MemberId> members) {
+  private HeartbeatRequest(MemberId leader, Collection<MemberId> members) {
+    checkNotNull(members, "members cannot be null");
     this.leader = leader;
     this.members = members;
   }
@@ -83,51 +79,5 @@ public class HeartbeatRequest extends AbstractRaftRequest {
         .add("leader", leader)
         .add("members", members)
         .toString();
-  }
-
-  /**
-   * Heartbeat request builder.
-   */
-  public static class Builder extends AbstractRaftRequest.Builder<Builder, HeartbeatRequest> {
-    private MemberId leader;
-    private Collection<MemberId> members;
-
-    /**
-     * Sets the request leader.
-     *
-     * @param leader The request leader.
-     * @return The request builder.
-     */
-    public Builder withLeader(MemberId leader) {
-      this.leader = leader;
-      return this;
-    }
-
-    /**
-     * Sets the request members.
-     *
-     * @param members The request members.
-     * @return The request builder.
-     * @throws NullPointerException if {@code members} is null
-     */
-    public Builder withMembers(Collection<MemberId> members) {
-      this.members = checkNotNull(members, "members cannot be null");
-      return this;
-    }
-
-    @Override
-    protected void validate() {
-      super.validate();
-      checkNotNull(members, "members cannot be null");
-    }
-
-    /**
-     * @throws IllegalStateException if status is OK and members is null
-     */
-    @Override
-    public HeartbeatRequest build() {
-      validate();
-      return new HeartbeatRequest(leader, members);
-    }
   }
 }

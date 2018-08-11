@@ -27,21 +27,24 @@ import static com.google.common.base.Preconditions.checkArgument;
  */
 public class AppendResponse extends AbstractRaftResponse {
 
-  /**
-   * Returns a new append response builder.
-   *
-   * @return A new append response builder.
-   */
-  public static Builder builder() {
-    return new Builder();
+  public static AppendResponse ok(long term, boolean succeeded, long lastLogIndex) {
+    return new AppendResponse(Status.OK, null, term, succeeded, lastLogIndex);
+  }
+
+  public static AppendResponse error(RaftError error) {
+    return new AppendResponse(Status.ERROR, error, 0, false, 0);
   }
 
   private final long term;
   private final boolean succeeded;
   private final long lastLogIndex;
 
-  public AppendResponse(Status status, RaftError error, long term, boolean succeeded, long lastLogIndex) {
+  private AppendResponse(Status status, RaftError error, long term, boolean succeeded, long lastLogIndex) {
     super(status, error);
+    if (status == Status.OK) {
+      checkArgument(term > 0, "term must be positive");
+      checkArgument(lastLogIndex >= 0, "lastLogIndex must be positive");
+    }
     this.term = term;
     this.succeeded = succeeded;
     this.lastLogIndex = lastLogIndex;
@@ -105,70 +108,6 @@ public class AppendResponse extends AbstractRaftResponse {
           .add("status", status)
           .add("error", error)
           .toString();
-    }
-  }
-
-  /**
-   * Append response builder.
-   */
-  public static class Builder extends AbstractRaftResponse.Builder<Builder, AppendResponse> {
-    private long term;
-    private boolean succeeded;
-    private long lastLogIndex;
-
-    /**
-     * Sets the response term.
-     *
-     * @param term The response term.
-     * @return The append response builder
-     * @throws IllegalArgumentException if {@code term} is not positive
-     */
-    public Builder withTerm(long term) {
-      checkArgument(term > 0, "term must be positive");
-      this.term = term;
-      return this;
-    }
-
-    /**
-     * Sets whether the request succeeded.
-     *
-     * @param succeeded Whether the append request succeeded.
-     * @return The append response builder.
-     */
-    public Builder withSucceeded(boolean succeeded) {
-      this.succeeded = succeeded;
-      return this;
-    }
-
-    /**
-     * Sets the last index of the replica's log.
-     *
-     * @param lastLogIndex The last index of the replica's log.
-     * @return The append response builder.
-     * @throws IllegalArgumentException if {@code index} is negative
-     */
-    public Builder withLastLogIndex(long lastLogIndex) {
-      checkArgument(lastLogIndex >= 0, "lastLogIndex must be positive");
-      this.lastLogIndex = lastLogIndex;
-      return this;
-    }
-
-    @Override
-    protected void validate() {
-      super.validate();
-      if (status == Status.OK) {
-        checkArgument(term > 0, "term must be positive");
-        checkArgument(lastLogIndex >= 0, "lastLogIndex must be positive");
-      }
-    }
-
-    /**
-     * @throws IllegalStateException if status is ok and term is not positive or log index is negative
-     */
-    @Override
-    public AppendResponse build() {
-      validate();
-      return new AppendResponse(status, error, term, succeeded, lastLogIndex);
     }
   }
 }

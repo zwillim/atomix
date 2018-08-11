@@ -30,8 +30,8 @@ public abstract class AbstractRaftResponse implements RaftResponse {
   protected final RaftError error;
 
   protected AbstractRaftResponse(Status status, RaftError error) {
-    this.status = status;
-    this.error = error;
+    this.status = checkNotNull(status, "status cannot be null");
+    this.error = checkNotNull(error, "error cannot be null");
   }
 
   @Override
@@ -65,46 +65,6 @@ public abstract class AbstractRaftResponse implements RaftResponse {
           .add("status", status)
           .toString();
     } else {
-      return toStringHelper(this)
-          .add("status", status)
-          .add("error", error)
-          .toString();
-    }
-  }
-
-  /**
-   * Abstract response builder.
-   *
-   * @param <T> The builder type.
-   * @param <U> The response type.
-   */
-  protected static abstract class Builder<T extends Builder<T, U>, U extends AbstractRaftResponse> implements RaftResponse.Builder<T, U> {
-    protected Status status;
-    protected RaftError error;
-
-    @Override
-    @SuppressWarnings("unchecked")
-    public T withStatus(Status status) {
-      this.status = checkNotNull(status, "status cannot be null");
-      return (T) this;
-    }
-
-    @Override
-    @SuppressWarnings("unchecked")
-    public T withError(RaftError error) {
-      this.error = checkNotNull(error, "error cannot be null");
-      return (T) this;
-    }
-
-    /**
-     * Validates the builder.
-     */
-    protected void validate() {
-      checkNotNull(status, "status cannot be null");
-    }
-
-    @Override
-    public String toString() {
       return toStringHelper(this)
           .add("status", status)
           .add("error", error)

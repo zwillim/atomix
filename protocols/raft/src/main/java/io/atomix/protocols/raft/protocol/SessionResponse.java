@@ -24,10 +24,4 @@ public abstract class SessionResponse extends AbstractRaftResponse {
   protected SessionResponse(Status status, RaftError error) {
     super(status, error);
   }
-
-  /**
-   * Session response builder.
-   */
-  public static abstract class Builder<T extends Builder<T, U>, U extends SessionResponse> extends AbstractRaftResponse.Builder<T, U> {
-  }
 }

@@ -27,9 +27,9 @@ import static com.google.common.base.Preconditions.checkArgument;
 /**
  * Base client operation response.
  * <p>
- * All operation responses are sent with a {@link #result()} and the {@link #index()} (or index) of the state
- * machine at the point at which the operation was evaluated. The version allows clients to ensure state progresses
- * monotonically when switching servers by providing the state machine version in future operation requests.
+ * All operation responses are sent with a {@link #result()} and the {@link #index()} (or index) of the state machine at
+ * the point at which the operation was evaluated. The version allows clients to ensure state progresses monotonically
+ * when switching servers by providing the state machine version in future operation requests.
  */
 public abstract class OperationResponse extends SessionResponse {
   protected final long index;
@@ -37,8 +37,13 @@ public abstract class OperationResponse extends SessionResponse {
   protected final byte[] result;
   protected final long lastSequence;
 
-  public OperationResponse(Status status, RaftError error, long index, long eventIndex, byte[] result, long lastSequence) {
+  protected OperationResponse(Status status, RaftError error, long index, long eventIndex, byte[] result, long lastSequence) {
     super(status, error);
+    if (status == Status.OK) {
+      checkArgument(index >= 0, "index must be positive");
+      checkArgument(eventIndex >= 0, "eventIndex must be positive");
+      checkArgument(lastSequence >= 0, "lastSequence must be positive");
+    }
     this.index = index;
     this.eventIndex = eventIndex;
     this.result = result;
@@ -95,11 +100,11 @@ public abstract class OperationResponse extends SessionResponse {
 
     OperationResponse response = (OperationResponse) object;
     return response.status == status
-            && Objects.equals(response.error, error)
-            && response.index == index
-            && response.eventIndex == eventIndex
-            && response.lastSequence == lastSequence
-            && Arrays.equals(response.result, result);
+        && Objects.equals(response.error, error)
+        && response.index == index
+        && response.eventIndex == eventIndex
+        && response.lastSequence == lastSequence
+        && Arrays.equals(response.result, result);
   }
 
   @Override
@@ -117,80 +122,6 @@ public abstract class OperationResponse extends SessionResponse {
           .add("error", error)
           .add("lastSequence", lastSequence)
           .toString();
-    }
-  }
-
-  /**
-   * Operation response builder.
-   */
-  public static abstract class Builder<T extends Builder<T, U>, U extends OperationResponse> extends SessionResponse.Builder<T, U> {
-    protected long index;
-    protected long eventIndex;
-    protected byte[] result;
-    protected long lastSequence;
-
-    /**
-     * Sets the response index.
-     *
-     * @param index The response index.
-     * @return The response builder.
-     * @throws IllegalArgumentException If the response index is not positive.
-     */
-    @SuppressWarnings("unchecked")
-    public T withIndex(long index) {
-      checkArgument(index >= 0, "index must be positive");
-      this.index = index;
-      return (T) this;
-    }
-
-    /**
-     * Sets the response index.
-     *
-     * @param eventIndex The response event index.
-     * @return The response builder.
-     * @throws IllegalArgumentException If the response index is not positive.
-     */
-    @SuppressWarnings("unchecked")
-    public T withEventIndex(long eventIndex) {
-      checkArgument(eventIndex >= 0, "eventIndex must be positive");
-      this.eventIndex = eventIndex;
-      return (T) this;
-    }
-
-    /**
-     * Sets the operation response result.
-     *
-     * @param result The response result.
-     * @return The response builder.
-     * @throws NullPointerException if {@code result} is null
-     */
-    @SuppressWarnings("unchecked")
-    public T withResult(byte[] result) {
-      this.result = result;
-      return (T) this;
-    }
-
-    /**
-     * Sets the last sequence number.
-     *
-     * @param lastSequence The last sequence number.
-     * @return The command response builder.
-     */
-    @SuppressWarnings("unchecked")
-    public T withLastSequence(long lastSequence) {
-      checkArgument(lastSequence >= 0, "lastSequence must be positive");
-      this.lastSequence = lastSequence;
-      return (T) this;
-    }
-
-    @Override
-    protected void validate() {
-      super.validate();
-      if (status == Status.OK) {
-        checkArgument(index >= 0, "index must be positive");
-        checkArgument(eventIndex >= 0, "eventIndex must be positive");
-        checkArgument(lastSequence >= 0, "lastSequence must be positive");
-      }
     }
   }
 }

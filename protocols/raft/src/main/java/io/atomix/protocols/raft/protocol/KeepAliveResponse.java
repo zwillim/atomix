@@ -28,20 +28,18 @@ import static com.google.common.base.Preconditions.checkNotNull;
 /**
  * Session keep alive response.
  * <p>
- * Session keep alive responses are sent upon the completion of a {@link KeepAliveRequest}
- * from a client. Keep alive responses, when successful, provide the current cluster configuration and leader
- * to the client to ensure clients can evolve with the structure of the cluster and make intelligent decisions
- * about connecting to the cluster.
+ * Session keep alive responses are sent upon the completion of a {@link KeepAliveRequest} from a client. Keep alive
+ * responses, when successful, provide the current cluster configuration and leader to the client to ensure clients can
+ * evolve with the structure of the cluster and make intelligent decisions about connecting to the cluster.
  */
 public class KeepAliveResponse extends AbstractRaftResponse {
 
-  /**
-   * Returns a new keep alive response builder.
-   *
-   * @return A new keep alive response builder.
-   */
-  public static Builder builder() {
-    return new Builder();
+  public static KeepAliveResponse ok(MemberId leader, Collection<MemberId> members, long[] sessionIds) {
+    return new KeepAliveResponse(Status.OK, null, leader, members, sessionIds);
+  }
+
+  public static KeepAliveResponse error(RaftError error) {
+    return new KeepAliveResponse(Status.ERROR, error, null, null, null);
   }
 
   private final MemberId leader;
@@ -50,6 +48,10 @@ public class KeepAliveResponse extends AbstractRaftResponse {
 
   public KeepAliveResponse(Status status, RaftError error, MemberId leader, Collection<MemberId> members, long[] sessionIds) {
     super(status, error);
+    if (status == Status.OK) {
+      checkNotNull(members, "members cannot be null");
+      checkNotNull(sessionIds, "sessionIds cannot be null");
+    }
     this.leader = leader;
     this.members = members;
     this.sessionIds = sessionIds;
@@ -114,67 +116,6 @@ public class KeepAliveResponse extends AbstractRaftResponse {
           .add("status", status)
           .add("error", error)
           .toString();
-    }
-  }
-
-  /**
-   * Status response builder.
-   */
-  public static class Builder extends AbstractRaftResponse.Builder<Builder, KeepAliveResponse> {
-    private MemberId leader;
-    private Collection<MemberId> members;
-    private long[] sessionIds;
-
-    /**
-     * Sets the response leader.
-     *
-     * @param leader The response leader.
-     * @return The response builder.
-     */
-    public Builder withLeader(MemberId leader) {
-      this.leader = leader;
-      return this;
-    }
-
-    /**
-     * Sets the response members.
-     *
-     * @param members The response members.
-     * @return The response builder.
-     * @throws NullPointerException if {@code members} is null
-     */
-    public Builder withMembers(Collection<MemberId> members) {
-      this.members = checkNotNull(members, "members cannot be null");
-      return this;
-    }
-
-    /**
-     * Sets the response sessions.
-     *
-     * @param sessionIds the response sessions
-     * @return the response builder
-     */
-    public Builder withSessionIds(long[] sessionIds) {
-      this.sessionIds = checkNotNull(sessionIds, "sessionIds cannot be null");
-      return this;
-    }
-
-    @Override
-    protected void validate() {
-      super.validate();
-      if (status == Status.OK) {
-        checkNotNull(members, "members cannot be null");
-        checkNotNull(sessionIds, "sessionIds cannot be null");
-      }
-    }
-
-    /**
-     * @throws IllegalStateException if status is OK and members is null
-     */
-    @Override
-    public KeepAliveResponse build() {
-      validate();
-      return new KeepAliveResponse(status, error, leader, members, sessionIds);
     }
   }
 }

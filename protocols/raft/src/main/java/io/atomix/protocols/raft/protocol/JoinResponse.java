@@ -15,8 +15,8 @@
  */
 package io.atomix.protocols.raft.protocol;
 
-import io.atomix.protocols.raft.cluster.RaftMember;
 import io.atomix.protocols.raft.RaftError;
+import io.atomix.protocols.raft.cluster.RaftMember;
 
 import java.util.Collection;
 
@@ -28,39 +28,21 @@ import static com.google.common.base.Preconditions.checkNotNull;
  */
 public class JoinResponse extends ConfigurationResponse {
 
-  /**
-   * Returns a new join response builder.
-   *
-   * @return A new join response builder.
-   */
-  public static Builder builder() {
-    return new Builder();
+  public static JoinResponse ok(long index, long term, long timestamp, Collection<RaftMember> members) {
+    return new JoinResponse(Status.OK, null, index, term, timestamp, members);
   }
 
-  public JoinResponse(Status status, RaftError error, long index, long term, long timestamp, Collection<RaftMember> members) {
+  public static JoinResponse error(RaftError.Type error) {
+    return new JoinResponse(Status.ERROR, new RaftError(error, null), 0, 0, 0, null);
+  }
+
+  private JoinResponse(Status status, RaftError error, long index, long term, long timestamp, Collection<RaftMember> members) {
     super(status, error, index, term, timestamp, members);
-  }
-
-  /**
-   * Join response builder.
-   */
-  public static class Builder extends ConfigurationResponse.Builder<Builder, JoinResponse> {
-    @Override
-    protected void validate() {
-      // JoinResponse allows null errors indicating the client should retry.
-      checkNotNull(status, "status cannot be null");
-      if (status == Status.OK) {
-        checkArgument(index >= 0, "index must be positive");
-        checkArgument(term >= 0, "term must be positive");
-        checkArgument(timestamp > 0, "time must be positive");
-        checkNotNull(members, "members cannot be null");
-      }
-    }
-
-    @Override
-    public JoinResponse build() {
-      validate();
-      return new JoinResponse(status, error, index, term, timestamp, members);
+    if (status == Status.OK) {
+      checkArgument(index >= 0, "index must be positive");
+      checkArgument(term >= 0, "term must be positive");
+      checkArgument(timestamp > 0, "time must be positive");
+      checkNotNull(members, "members cannot be null");
     }
   }
 }

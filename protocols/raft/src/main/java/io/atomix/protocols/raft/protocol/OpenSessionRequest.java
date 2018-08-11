@@ -15,8 +15,6 @@
  */
 package io.atomix.protocols.raft.protocol;
 
-import io.atomix.cluster.MemberId;
-import io.atomix.primitive.PrimitiveType;
 import io.atomix.protocols.raft.ReadConsistency;
 
 import java.util.Objects;
@@ -30,29 +28,40 @@ import static com.google.common.base.Preconditions.checkNotNull;
  */
 public class OpenSessionRequest extends AbstractRaftRequest {
 
-  /**
-   * Returns a new open session request builder.
-   *
-   * @return A new open session request builder.
-   */
-  public static Builder builder() {
-    return new Builder();
+  public static OpenSessionRequest request(
+      String member,
+      String name,
+      String typeName,
+      byte[] config,
+      ReadConsistency readConsistency,
+      long minTimeout,
+      long maxTimeout) {
+    return new OpenSessionRequest(member, name, typeName, config, readConsistency, minTimeout, maxTimeout);
   }
 
-  private final String node;
-  private final String name;
-  private final String typeName;
-  private final byte[] config;
+  private final String memberId;
+  private final String primitiveName;
+  private final String primitiveType;
+  private final byte[] serviceConfig;
   private final ReadConsistency readConsistency;
   private final long minTimeout;
   private final long maxTimeout;
 
-  public OpenSessionRequest(String node, String name, String typeName, byte[] config, ReadConsistency readConsistency, long minTimeout, long maxTimeout) {
-    this.node = node;
-    this.name = name;
-    this.typeName = typeName;
-    this.config = config;
-    this.readConsistency = readConsistency;
+  private OpenSessionRequest(
+      String memberId,
+      String primitiveName,
+      String primitiveType,
+      byte[] serviceConfig,
+      ReadConsistency readConsistency,
+      long minTimeout,
+      long maxTimeout) {
+    checkArgument(minTimeout >= 0, "minTimeout must be positive");
+    checkArgument(maxTimeout >= 0, "maxTimeout must be positive");
+    this.memberId = checkNotNull(memberId);
+    this.primitiveName = checkNotNull(primitiveName);
+    this.primitiveType = checkNotNull(primitiveType);
+    this.serviceConfig = checkNotNull(serviceConfig);
+    this.readConsistency = checkNotNull(readConsistency);
     this.minTimeout = minTimeout;
     this.maxTimeout = maxTimeout;
   }
@@ -62,8 +71,8 @@ public class OpenSessionRequest extends AbstractRaftRequest {
    *
    * @return The client node identifier.
    */
-  public String node() {
-    return node;
+  public String memberId() {
+    return memberId;
   }
 
   /**
@@ -71,8 +80,8 @@ public class OpenSessionRequest extends AbstractRaftRequest {
    *
    * @return The state machine name.
    */
-  public String serviceName() {
-    return name;
+  public String primitiveName() {
+    return primitiveName;
   }
 
   /**
@@ -80,8 +89,8 @@ public class OpenSessionRequest extends AbstractRaftRequest {
    *
    * @return The state machine type.
    */
-  public String serviceType() {
-    return typeName;
+  public String primitiveType() {
+    return primitiveType;
   }
 
   /**
@@ -90,7 +99,7 @@ public class OpenSessionRequest extends AbstractRaftRequest {
    * @return the service configuration
    */
   public byte[] serviceConfig() {
-    return config;
+    return serviceConfig;
   }
 
   /**
@@ -122,16 +131,16 @@ public class OpenSessionRequest extends AbstractRaftRequest {
 
   @Override
   public int hashCode() {
-    return Objects.hash(getClass(), name, typeName, minTimeout, maxTimeout);
+    return Objects.hash(getClass(), primitiveName, primitiveType, minTimeout, maxTimeout);
   }
 
   @Override
   public boolean equals(Object object) {
     if (object instanceof OpenSessionRequest) {
       OpenSessionRequest request = (OpenSessionRequest) object;
-      return request.node.equals(node)
-          && request.name.equals(name)
-          && request.typeName.equals(typeName)
+      return request.memberId.equals(memberId)
+          && request.primitiveName.equals(primitiveName)
+          && request.primitiveType.equals(primitiveType)
           && request.readConsistency == readConsistency
           && request.minTimeout == minTimeout
           && request.maxTimeout == maxTimeout;
@@ -142,131 +151,12 @@ public class OpenSessionRequest extends AbstractRaftRequest {
   @Override
   public String toString() {
     return toStringHelper(this)
-        .add("node", node)
-        .add("serviceName", name)
-        .add("serviceType", typeName)
+        .add("node", memberId)
+        .add("serviceName", primitiveName)
+        .add("serviceType", primitiveType)
         .add("readConsistency", readConsistency)
         .add("minTimeout", minTimeout)
         .add("maxTimeout", maxTimeout)
         .toString();
-  }
-
-  /**
-   * Open session request builder.
-   */
-  public static class Builder extends AbstractRaftRequest.Builder<Builder, OpenSessionRequest> {
-    private String memberId;
-    private String serviceName;
-    private String serviceType;
-    private byte[] serviceConfig;
-    private ReadConsistency readConsistency = ReadConsistency.LINEARIZABLE;
-    private long minTimeout;
-    private long maxTimeout;
-
-    /**
-     * Sets the client node identifier.
-     *
-     * @param node The client node identifier.
-     * @return The open session request builder.
-     * @throws NullPointerException if {@code node} is {@code null}
-     */
-    public Builder withMemberId(MemberId node) {
-      this.memberId = checkNotNull(node, "node cannot be null").id();
-      return this;
-    }
-
-    /**
-     * Sets the service name.
-     *
-     * @param serviceName The service name.
-     * @return The open session request builder.
-     * @throws NullPointerException if {@code serviceName} is {@code null}
-     */
-    public Builder withServiceName(String serviceName) {
-      this.serviceName = checkNotNull(serviceName, "serviceName cannot be null");
-      return this;
-    }
-
-    /**
-     * Sets the service type name.
-     *
-     * @param primitiveType The service type name.
-     * @return The open session request builder.
-     * @throws NullPointerException if {@code serviceType} is {@code null}
-     */
-    public Builder withServiceType(PrimitiveType primitiveType) {
-      this.serviceType = checkNotNull(primitiveType, "serviceType cannot be null").name();
-      return this;
-    }
-
-    /**
-     * Sets the service configuration.
-     *
-     * @param config the service configuration
-     * @return the open session request builder
-     * @throws NullPointerException if the configuration is {@code null}
-     */
-    public Builder withServiceConfig(byte[] config) {
-      this.serviceConfig = checkNotNull(config, "config cannot be null");
-      return this;
-    }
-
-    /**
-     * Sets the session read consistency.
-     *
-     * @param readConsistency the session read consistency
-     * @return the session request builder
-     * @throws NullPointerException if the {@code readConsistency} is null
-     */
-    public Builder withReadConsistency(ReadConsistency readConsistency) {
-      this.readConsistency = checkNotNull(readConsistency, "readConsistency cannot be null");
-      return this;
-    }
-
-    /**
-     * Sets the minimum session timeout.
-     *
-     * @param timeout The minimum session timeout.
-     * @return The open session request builder.
-     * @throws IllegalArgumentException if {@code timeout} is not positive
-     */
-    public Builder withMinTimeout(long timeout) {
-      checkArgument(timeout >= 0, "timeout must be positive");
-      this.minTimeout = timeout;
-      return this;
-    }
-
-    /**
-     * Sets the maximum session timeout.
-     *
-     * @param timeout The maximum session timeout.
-     * @return The open session request builder.
-     * @throws IllegalArgumentException if {@code timeout} is not positive
-     */
-    public Builder withMaxTimeout(long timeout) {
-      checkArgument(timeout >= 0, "timeout must be positive");
-      this.maxTimeout = timeout;
-      return this;
-    }
-
-    @Override
-    protected void validate() {
-      super.validate();
-      checkNotNull(memberId, "memberId cannot be null");
-      checkNotNull(serviceName, "name cannot be null");
-      checkNotNull(serviceType, "typeName cannot be null");
-      checkNotNull(serviceConfig, "serviceConfig cannot be null");
-      checkArgument(minTimeout >= 0, "minTimeout must be positive");
-      checkArgument(maxTimeout >= 0, "maxTimeout must be positive");
-    }
-
-    /**
-     * @throws IllegalStateException is session is not positive
-     */
-    @Override
-    public OpenSessionRequest build() {
-      validate();
-      return new OpenSessionRequest(memberId, serviceName, serviceType, serviceConfig, readConsistency, minTimeout, maxTimeout);
-    }
   }
 }

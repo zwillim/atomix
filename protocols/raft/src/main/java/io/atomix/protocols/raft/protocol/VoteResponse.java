@@ -25,26 +25,28 @@ import static com.google.common.base.Preconditions.checkArgument;
 /**
  * Server vote response.
  * <p>
- * Vote responses are sent by active servers in response to vote requests by candidate to indicate
- * whether the responding server voted for the requesting candidate. This is indicated by the
- * {@link #voted()} field of the response.
+ * Vote responses are sent by active servers in response to vote requests by candidate to indicate whether the
+ * responding server voted for the requesting candidate. This is indicated by the {@link #voted()} field of the
+ * response.
  */
 public class VoteResponse extends AbstractRaftResponse {
 
-  /**
-   * Returns a new vote response builder.
-   *
-   * @return A new vote response builder.
-   */
-  public static Builder builder() {
-    return new Builder();
+  public static VoteResponse ok(long term, boolean voted) {
+    return new VoteResponse(Status.OK, null, term, voted);
+  }
+
+  public static VoteResponse error(RaftError error) {
+    return new VoteResponse(Status.ERROR, error, 0, false);
   }
 
   private final long term;
   private final boolean voted;
 
-  public VoteResponse(Status status, RaftError error, long term, boolean voted) {
+  private VoteResponse(Status status, RaftError error, long term, boolean voted) {
     super(status, error);
+    if (status == Status.OK) {
+      checkArgument(term >= 0, "term must be positive");
+    }
     this.term = term;
     this.voted = voted;
   }
@@ -96,52 +98,6 @@ public class VoteResponse extends AbstractRaftResponse {
           .add("status", status)
           .add("error", error)
           .toString();
-    }
-  }
-
-  /**
-   * Poll response builder.
-   */
-  public static class Builder extends AbstractRaftResponse.Builder<Builder, VoteResponse> {
-    private long term = -1;
-    private boolean voted;
-
-    /**
-     * Sets the response term.
-     *
-     * @param term The response term.
-     * @return The vote response builder.
-     * @throws IllegalArgumentException if {@code term} is negative
-     */
-    public Builder withTerm(long term) {
-      checkArgument(term >= 0, "term must be positive");
-      this.term = term;
-      return this;
-    }
-
-    /**
-     * Sets whether the vote was granted.
-     *
-     * @param voted Whether the vote was granted.
-     * @return The vote response builder.
-     */
-    public Builder withVoted(boolean voted) {
-      this.voted = voted;
-      return this;
-    }
-
-    @Override
-    protected void validate() {
-      super.validate();
-      if (status == Status.OK) {
-        checkArgument(term >= 0, "term must be positive");
-      }
-    }
-
-    @Override
-    public VoteResponse build() {
-      validate();
-      return new VoteResponse(status, error, term, voted);
     }
   }
 }

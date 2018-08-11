@@ -204,24 +204,24 @@ public final class LeaderRole extends ActiveRole {
     if (expiring.add(session.sessionId())) {
       log.debug("Expiring session due to heartbeat failure: {}", session);
       appendAndCompact(new CloseSessionEntry(raft.getTerm(), System.currentTimeMillis(), session.sessionId().id(), true))
-              .whenCompleteAsync((entry, error) -> {
-                if (error != null) {
-                  expiring.remove(session.sessionId());
-                  return;
-                }
+          .whenCompleteAsync((entry, error) -> {
+            if (error != null) {
+              expiring.remove(session.sessionId());
+              return;
+            }
 
-                appender.appendEntries(entry.index()).whenComplete((commitIndex, commitError) -> {
-                  raft.checkThread();
-                  if (isRunning()) {
-                    if (commitError == null) {
-                      raft.getServiceManager().<Long>apply(entry.index())
-                              .whenCompleteAsync((r, e) -> expiring.remove(session.sessionId()), raft.getThreadContext());
-                    } else {
-                      expiring.remove(session.sessionId());
-                    }
-                  }
-                });
-              }, raft.getThreadContext());
+            appender.appendEntries(entry.index()).whenComplete((commitIndex, commitError) -> {
+              raft.checkThread();
+              if (isRunning()) {
+                if (commitError == null) {
+                  raft.getServiceManager().<Long>apply(entry.index())
+                      .whenCompleteAsync((r, e) -> expiring.remove(session.sessionId()), raft.getThreadContext());
+                } else {
+                  expiring.remove(session.sessionId());
+                }
+              }
+            });
+          }, raft.getThreadContext());
     }
   }
 
@@ -281,20 +281,16 @@ public final class LeaderRole extends ActiveRole {
     // Configuration changes should not be allowed until the leader has committed a no-op entry.
     // See https://groups.google.com/forum/#!topic/raft-dev/t4xj6dJTP6E
     if (configuring() || initializing()) {
-      return CompletableFuture.completedFuture(logResponse(JoinResponse.builder()
-          .withStatus(RaftResponse.Status.ERROR)
-          .build()));
+      return CompletableFuture.completedFuture(logResponse(JoinResponse.error(null)));
     }
 
     // If the member is already a known member of the cluster, complete the join successfully.
     if (raft.getCluster().getMember(request.member().memberId()) != null) {
-      return CompletableFuture.completedFuture(logResponse(JoinResponse.builder()
-          .withStatus(RaftResponse.Status.OK)
-          .withIndex(raft.getCluster().getConfiguration().index())
-          .withTerm(raft.getCluster().getConfiguration().term())
-          .withTime(raft.getCluster().getConfiguration().time())
-          .withMembers(raft.getCluster().getMembers())
-          .build()));
+      return CompletableFuture.completedFuture(logResponse(JoinResponse.ok(
+          raft.getCluster().getConfiguration().index(),
+          raft.getCluster().getConfiguration().term(),
+          raft.getCluster().getConfiguration().time(),
+          raft.getCluster().getMembers())));
     }
 
     RaftMember member = request.member();
@@ -307,18 +303,13 @@ public final class LeaderRole extends ActiveRole {
     CompletableFuture<JoinResponse> future = new CompletableFuture<>();
     configure(members).whenComplete((index, error) -> {
       if (error == null) {
-        future.complete(logResponse(JoinResponse.builder()
-            .withStatus(RaftResponse.Status.OK)
-            .withIndex(index)
-            .withTerm(raft.getCluster().getConfiguration().term())
-            .withTime(raft.getCluster().getConfiguration().time())
-            .withMembers(members)
-            .build()));
+        future.complete(logResponse(JoinResponse.ok(
+            index,
+            raft.getCluster().getConfiguration().term(),
+            raft.getCluster().getConfiguration().time(),
+            members)));
       } else {
-        future.complete(logResponse(JoinResponse.builder()
-            .withStatus(RaftResponse.Status.ERROR)
-            .withError(RaftError.Type.PROTOCOL_ERROR)
-            .build()));
+        future.complete(logResponse(JoinResponse.error(RaftError.Type.PROTOCOL_ERROR)));
       }
     });
     return future;
@@ -334,18 +325,13 @@ public final class LeaderRole extends ActiveRole {
     // Configuration changes should not be allowed until the leader has committed a no-op entry.
     // See https://groups.google.com/forum/#!topic/raft-dev/t4xj6dJTP6E
     if (configuring() || initializing()) {
-      return CompletableFuture.completedFuture(logResponse(ReconfigureResponse.builder()
-          .withStatus(RaftResponse.Status.ERROR)
-          .build()));
+      return CompletableFuture.completedFuture(logResponse(ReconfigureResponse.error(null)));
     }
 
     // If the member is not a known member of the cluster, fail the promotion.
     DefaultRaftMember existingMember = raft.getCluster().getMember(request.member().memberId());
     if (existingMember == null) {
-      return CompletableFuture.completedFuture(logResponse(ReconfigureResponse.builder()
-          .withStatus(RaftResponse.Status.ERROR)
-          .withError(RaftError.Type.UNKNOWN_SESSION)
-          .build()));
+      return CompletableFuture.completedFuture(logResponse(ReconfigureResponse.error(RaftError.Type.UNKNOWN_SESSION)));
     }
 
     // If the configuration request index is less than the last known configuration index for
@@ -609,10 +595,10 @@ public final class LeaderRole extends ActiveRole {
     PendingCommand existingCommand = session.getCommand(sequenceNumber);
     if (existingCommand != null) {
       if (sequenceNumber == session.nextRequestSequence()) {
-          session.removeCommand(sequenceNumber);
-          commitCommand(existingCommand.request(), existingCommand.future());
-          session.setRequestSequence(sequenceNumber);
-          drainCommands(session);
+        session.removeCommand(sequenceNumber);
+        commitCommand(existingCommand.request(), existingCommand.future());
+        session.setRequestSequence(sequenceNumber);
+        drainCommands(session);
       }
       log.trace("Returning pending result for command sequence {}", sequenceNumber);
       return existingCommand.future();
@@ -626,15 +612,15 @@ public final class LeaderRole extends ActiveRole {
     // to force it to be resent by the client.
     if (sequenceNumber > session.nextRequestSequence()) {
       if (session.getCommands().size() < MAX_PENDING_COMMANDS) {
-          log.trace("Registered sequence command {} > {}", sequenceNumber, session.nextRequestSequence());
-          session.registerCommand(request.sequenceNumber(), new PendingCommand(request, future));
-          return future;
+        log.trace("Registered sequence command {} > {}", sequenceNumber, session.nextRequestSequence());
+        session.registerCommand(request.sequenceNumber(), new PendingCommand(request, future));
+        return future;
       } else {
-          return CompletableFuture.completedFuture(logResponse(CommandResponse.builder()
-                  .withStatus(RaftResponse.Status.ERROR)
-                  .withError(RaftError.Type.COMMAND_FAILURE)
-                  .withLastSequence(session.getRequestSequence())
-                  .build()));
+        return CompletableFuture.completedFuture(logResponse(CommandResponse.builder()
+            .withStatus(RaftResponse.Status.ERROR)
+            .withError(RaftError.Type.COMMAND_FAILURE)
+            .withLastSequence(session.getRequestSequence())
+            .build()));
       }
     }
 
@@ -643,12 +629,12 @@ public final class LeaderRole extends ActiveRole {
     if (sequenceNumber <= session.getCommandSequence()) {
       OperationResult result = session.getResult(sequenceNumber);
       if (result != null) {
-          completeOperation(result, CommandResponse.builder(), null, future);
+        completeOperation(result, CommandResponse.builder(), null, future);
       } else {
-          future.complete(CommandResponse.builder()
-                  .withStatus(RaftResponse.Status.ERROR)
-                  .withError(RaftError.Type.PROTOCOL_ERROR)
-                  .build());
+        future.complete(CommandResponse.builder()
+            .withStatus(RaftResponse.Status.ERROR)
+            .withError(RaftError.Type.PROTOCOL_ERROR)
+            .build());
       }
     }
     // Otherwise, commit the command and update the request sequence number.
@@ -680,7 +666,7 @@ public final class LeaderRole extends ActiveRole {
    * Commits a command.
    *
    * @param request the command request
-   * @param future  the command response future
+   * @param future the command response future
    */
   private void commitCommand(CommandRequest request, CompletableFuture<CommandResponse> future) {
     final long term = raft.getTerm();
@@ -695,7 +681,6 @@ public final class LeaderRole extends ActiveRole {
                 .build());
             return;
           }
-
 
 
           // Replicate the command to followers.
@@ -778,8 +763,8 @@ public final class LeaderRole extends ActiveRole {
   /**
    * Executes a bounded linearizable query.
    * <p>
-   * Bounded linearizable queries succeed as long as this server remains the leader. This is possible
-   * since the leader will step down in the event it fails to contact a majority of the cluster.
+   * Bounded linearizable queries succeed as long as this server remains the leader. This is possible since the leader
+   * will step down in the event it fails to contact a majority of the cluster.
    */
   private CompletableFuture<QueryResponse> queryBoundedLinearizable(Indexed<QueryEntry> entry) {
     return applyQuery(entry);
@@ -788,8 +773,8 @@ public final class LeaderRole extends ActiveRole {
   /**
    * Executes a linearizable query.
    * <p>
-   * Linearizable queries are first sequenced with commands and then applied to the state machine. Once
-   * applied, we verify the node's leadership prior to responding successfully to the query.
+   * Linearizable queries are first sequenced with commands and then applied to the state machine. Once applied, we
+   * verify the node's leadership prior to responding successfully to the query.
    */
   private CompletableFuture<QueryResponse> queryLinearizable(Indexed<QueryEntry> entry) {
     return applyQuery(entry)
@@ -823,9 +808,9 @@ public final class LeaderRole extends ActiveRole {
     appendAndCompact(new OpenSessionEntry(
         term,
         timestamp,
-        request.node(),
-        request.serviceName(),
-        request.serviceType(),
+        request.memberId(),
+        request.primitiveName(),
+        request.primitiveType(),
         request.serviceConfig(),
         request.readConsistency(),
         minTimeout,
@@ -1028,7 +1013,7 @@ public final class LeaderRole extends ActiveRole {
    * Appends an entry to the Raft log and compacts logs if necessary.
    *
    * @param entry the entry to append
-   * @param <E>   the entry type
+   * @param <E> the entry type
    * @return a completable future to be completed once the entry has been appended
    */
   private <E extends RaftLogEntry> CompletableFuture<Indexed<E>> appendAndCompact(E entry) {
@@ -1038,9 +1023,9 @@ public final class LeaderRole extends ActiveRole {
   /**
    * Appends an entry to the Raft log and compacts logs if necessary.
    *
-   * @param entry   the entry to append
+   * @param entry the entry to append
    * @param attempt the append attempt count
-   * @param <E>     the entry type
+   * @param <E> the entry type
    * @return a completable future to be completed once the entry has been appended
    */
   protected <E extends RaftLogEntry> CompletableFuture<Indexed<E>> appendAndCompact(E entry, int attempt) {

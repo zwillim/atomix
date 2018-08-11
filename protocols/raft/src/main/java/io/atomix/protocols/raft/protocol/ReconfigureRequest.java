@@ -27,20 +27,17 @@ import static com.google.common.base.Preconditions.checkArgument;
  */
 public class ReconfigureRequest extends ConfigurationRequest {
 
-  /**
-   * Returns a new reconfigure request builder.
-   *
-   * @return A new reconfigure request builder.
-   */
-  public static Builder builder() {
-    return new Builder();
+  public static ReconfigureRequest request(RaftMember member, long index, long term) {
+    return new ReconfigureRequest(member, index, term);
   }
 
   private final long index;
   private final long term;
 
-  public ReconfigureRequest(RaftMember member, long index, long term) {
+  private ReconfigureRequest(RaftMember member, long index, long term) {
     super(member);
+    checkArgument(index >= 0, "index must be positive");
+    checkArgument(term >= 0, "term must be positive");
     this.index = index;
     this.term = term;
   }
@@ -84,50 +81,5 @@ public class ReconfigureRequest extends ConfigurationRequest {
         .add("term", term)
         .add("member", member)
         .toString();
-  }
-
-  /**
-   * Reconfigure request builder.
-   */
-  public static class Builder extends ConfigurationRequest.Builder<Builder, ReconfigureRequest> {
-    private long index = -1;
-    private long term = -1;
-
-    /**
-     * Sets the request index.
-     *
-     * @param index The request index.
-     * @return The request builder.
-     */
-    public Builder withIndex(long index) {
-      checkArgument(index >= 0, "index must be positive");
-      this.index = index;
-      return this;
-    }
-
-    /**
-     * Sets the request term.
-     *
-     * @param term The request term.
-     * @return The request builder.
-     */
-    public Builder withTerm(long term) {
-      checkArgument(term >= 0, "term must be positive");
-      this.term = term;
-      return this;
-    }
-
-    @Override
-    protected void validate() {
-      super.validate();
-      checkArgument(index >= 0, "index must be positive");
-      checkArgument(term >= 0, "term must be positive");
-    }
-
-    @Override
-    public ReconfigureRequest build() {
-      validate();
-      return new ReconfigureRequest(member, index, term);
-    }
   }
 }

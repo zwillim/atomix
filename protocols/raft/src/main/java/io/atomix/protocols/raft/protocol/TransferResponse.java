@@ -22,27 +22,15 @@ import io.atomix.protocols.raft.RaftError;
  */
 public class TransferResponse extends AbstractRaftResponse {
 
-  /**
-   * Returns a new transfer response builder.
-   *
-   * @return A new transfer response builder.
-   */
-  public static Builder builder() {
-    return new Builder();
+  public static TransferResponse ok() {
+    return new TransferResponse(Status.OK, null);
   }
 
-  public TransferResponse(Status status, RaftError error) {
+  public static TransferResponse error(RaftError error) {
+    return new TransferResponse(Status.ERROR, error);
+  }
+
+  private TransferResponse(Status status, RaftError error) {
     super(status, error);
-  }
-
-  /**
-   * Join response builder.
-   */
-  public static class Builder extends AbstractRaftResponse.Builder<Builder, TransferResponse> {
-    @Override
-    public TransferResponse build() {
-      validate();
-      return new TransferResponse(status, error);
-    }
   }
 }

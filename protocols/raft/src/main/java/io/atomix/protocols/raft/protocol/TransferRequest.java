@@ -27,18 +27,14 @@ import static com.google.common.base.Preconditions.checkNotNull;
  */
 public class TransferRequest extends AbstractRaftRequest {
 
-  /**
-   * Returns a new transfer request builder.
-   *
-   * @return A new transfer request builder.
-   */
-  public static Builder builder() {
-    return new Builder();
+  public static TransferRequest request(MemberId member) {
+    return new TransferRequest(member);
   }
 
   protected final MemberId member;
 
-  protected TransferRequest(MemberId member) {
+  private TransferRequest(MemberId member) {
+    checkNotNull(member, "member cannot be null");
     this.member = member;
   }
 
@@ -69,36 +65,5 @@ public class TransferRequest extends AbstractRaftRequest {
     return toStringHelper(this)
         .add("member", member)
         .toString();
-  }
-
-  /**
-   * Transfer request builder.
-   */
-  public static class Builder extends AbstractRaftRequest.Builder<Builder, TransferRequest> {
-    protected MemberId member;
-
-    /**
-     * Sets the request member.
-     *
-     * @param member The request member.
-     * @return The request builder.
-     * @throws NullPointerException if {@code member} is null
-     */
-    @SuppressWarnings("unchecked")
-    public Builder withMember(MemberId member) {
-      this.member = checkNotNull(member, "member cannot be null");
-      return this;
-    }
-
-    @Override
-    protected void validate() {
-      super.validate();
-      checkNotNull(member, "member cannot be null");
-    }
-
-    @Override
-    public TransferRequest build() {
-      return new TransferRequest(member);
-    }
   }
 }

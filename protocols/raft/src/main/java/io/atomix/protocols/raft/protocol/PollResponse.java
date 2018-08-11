@@ -25,19 +25,18 @@ import static com.google.common.base.Preconditions.checkArgument;
 /**
  * Server poll response.
  * <p>
- * Poll responses are sent by active servers in response to poll requests by followers to indicate
- * whether the responding server would vote for the requesting server if it were a candidate. This is
- * indicated by the {@link #accepted()} field of the response.
+ * Poll responses are sent by active servers in response to poll requests by followers to indicate whether the
+ * responding server would vote for the requesting server if it were a candidate. This is indicated by the {@link
+ * #accepted()} field of the response.
  */
 public class PollResponse extends AbstractRaftResponse {
 
-  /**
-   * Returns a new poll response builder.
-   *
-   * @return A new poll response builder.
-   */
-  public static Builder builder() {
-    return new Builder();
+  public static PollResponse ok(long term, boolean accepted) {
+    return new PollResponse(Status.OK, null, term, accepted);
+  }
+
+  public static PollResponse error(RaftError error) {
+    return new PollResponse(Status.ERROR, error, 0, false);
   }
 
   private final long term;
@@ -45,6 +44,9 @@ public class PollResponse extends AbstractRaftResponse {
 
   public PollResponse(Status status, RaftError error, long term, boolean accepted) {
     super(status, error);
+    if (status == Status.OK) {
+      checkArgument(term >= 0, "term must be positive");
+    }
     this.term = term;
     this.accepted = accepted;
   }
@@ -96,52 +98,6 @@ public class PollResponse extends AbstractRaftResponse {
           .add("status", status)
           .add("error", error)
           .toString();
-    }
-  }
-
-  /**
-   * Poll response builder.
-   */
-  public static class Builder extends AbstractRaftResponse.Builder<Builder, PollResponse> {
-    private long term = -1;
-    private boolean accepted;
-
-    /**
-     * Sets the response term.
-     *
-     * @param term The response term.
-     * @return The poll response builder.
-     * @throws IllegalArgumentException if {@code term} is not positive
-     */
-    public Builder withTerm(long term) {
-      checkArgument(term >= 0, "term must be positive");
-      this.term = term;
-      return this;
-    }
-
-    /**
-     * Sets whether the poll was granted.
-     *
-     * @param accepted Whether the poll was granted.
-     * @return The poll response builder.
-     */
-    public Builder withAccepted(boolean accepted) {
-      this.accepted = accepted;
-      return this;
-    }
-
-    @Override
-    protected void validate() {
-      super.validate();
-      if (status == Status.OK) {
-        checkArgument(term >= 0, "term must be positive");
-      }
-    }
-
-    @Override
-    public PollResponse build() {
-      validate();
-      return new PollResponse(status, error, term, accepted);
     }
   }
 }

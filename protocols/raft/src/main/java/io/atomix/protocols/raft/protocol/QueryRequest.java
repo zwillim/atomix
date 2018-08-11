@@ -25,28 +25,24 @@ import static com.google.common.base.Preconditions.checkArgument;
 /**
  * Client query request.
  * <p>
- * Query requests are submitted by clients to the Raft cluster to commit {@link PrimitiveOperation}s to
- * the replicated state machine. Each query request must be associated with a registered
- * {@link #session()} and have a unique {@link #sequenceNumber()} number within that session. Queries will
- * be applied in the cluster in the order defined by the provided sequence number. Thus, sequence numbers
- * should never be skipped. In the event of a failure of a query request, the request should be resent
- * with the same sequence number. Queries are guaranteed to be applied in sequence order.
+ * Query requests are submitted by clients to the Raft cluster to commit {@link PrimitiveOperation}s to the replicated
+ * state machine. Each query request must be associated with a registered {@link #session()} and have a unique {@link
+ * #sequenceNumber()} number within that session. Queries will be applied in the cluster in the order defined by the
+ * provided sequence number. Thus, sequence numbers should never be skipped. In the event of a failure of a query
+ * request, the request should be resent with the same sequence number. Queries are guaranteed to be applied in sequence
+ * order.
  */
 public class QueryRequest extends OperationRequest {
 
-  /**
-   * Returns a new query request builder.
-   *
-   * @return A new query request builder.
-   */
-  public static Builder builder() {
-    return new Builder();
+  public static QueryRequest request(long session, long sequence, PrimitiveOperation operation, long index) {
+    return new QueryRequest(session, sequence, operation, index);
   }
 
   private final long index;
 
-  public QueryRequest(long session, long sequence, PrimitiveOperation operation, long index) {
+  private QueryRequest(long session, long sequence, PrimitiveOperation operation, long index) {
     super(session, sequence, operation);
+    checkArgument(index >= 0, "index must be positive");
     this.index = index;
   }
 
@@ -84,40 +80,4 @@ public class QueryRequest extends OperationRequest {
         .add("index", index)
         .toString();
   }
-
-  /**
-   * Query request builder.
-   */
-  public static class Builder extends OperationRequest.Builder<Builder, QueryRequest> {
-    private long index;
-
-    /**
-     * Sets the request index.
-     *
-     * @param index The request index.
-     * @return The request builder.
-     * @throws IllegalArgumentException if {@code index} is less than {@code 0}
-     */
-    public Builder withIndex(long index) {
-      checkArgument(index >= 0, "index must be positive");
-      this.index = index;
-      return this;
-    }
-
-    @Override
-    protected void validate() {
-      super.validate();
-      checkArgument(index >= 0, "index must be positive");
-    }
-
-    /**
-     * @throws IllegalStateException if {@code query} is null
-     */
-    @Override
-    public QueryRequest build() {
-      validate();
-      return new QueryRequest(session, sequence, operation, index);
-    }
-  }
-
 }

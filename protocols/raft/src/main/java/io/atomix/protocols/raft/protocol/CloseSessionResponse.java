@@ -24,13 +24,12 @@ import java.util.Objects;
  */
 public class CloseSessionResponse extends SessionResponse {
 
-  /**
-   * Returns a new keep alive response builder.
-   *
-   * @return A new keep alive response builder.
-   */
-  public static Builder builder() {
-    return new Builder();
+  public static CloseSessionResponse ok() {
+    return new CloseSessionResponse(Status.OK, null);
+  }
+
+  public static CloseSessionResponse error(RaftError error) {
+    return new CloseSessionResponse(Status.ERROR, error);
   }
 
   public CloseSessionResponse(Status status, RaftError error) {
@@ -44,16 +43,5 @@ public class CloseSessionResponse extends SessionResponse {
       return response.status == status && Objects.equals(response.error, error);
     }
     return false;
-  }
-
-  /**
-   * Status response builder.
-   */
-  public static class Builder extends SessionResponse.Builder<Builder, CloseSessionResponse> {
-    @Override
-    public CloseSessionResponse build() {
-      validate();
-      return new CloseSessionResponse(status, error);
-    }
   }
 }

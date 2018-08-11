@@ -25,14 +25,15 @@ import static com.google.common.base.Preconditions.checkNotNull;
 /**
  * Configuration change request.
  * <p>
- * Configuration change requests are the basis for members joining and leaving the cluster.
- * When a member wants to join or leave the cluster, it must submit a configuration change
- * request to the leader where the change will be logged and replicated.
+ * Configuration change requests are the basis for members joining and leaving the cluster. When a member wants to join
+ * or leave the cluster, it must submit a configuration change request to the leader where the change will be logged and
+ * replicated.
  */
 public abstract class ConfigurationRequest extends AbstractRaftRequest {
   protected final RaftMember member;
 
   protected ConfigurationRequest(RaftMember member) {
+    checkNotNull(member, "member cannot be null");
     this.member = member;
   }
 
@@ -63,31 +64,5 @@ public abstract class ConfigurationRequest extends AbstractRaftRequest {
     return toStringHelper(this)
         .add("member", member)
         .toString();
-  }
-
-  /**
-   * Configuration request builder.
-   */
-  public static abstract class Builder<T extends Builder<T, U>, U extends ConfigurationRequest> extends AbstractRaftRequest.Builder<T, U> {
-    protected RaftMember member;
-
-    /**
-     * Sets the request member.
-     *
-     * @param member The request member.
-     * @return The request builder.
-     * @throws NullPointerException if {@code member} is null
-     */
-    @SuppressWarnings("unchecked")
-    public T withMember(RaftMember member) {
-      this.member = checkNotNull(member, "member cannot be null");
-      return (T) this;
-    }
-
-    @Override
-    protected void validate() {
-      super.validate();
-      checkNotNull(member, "member cannot be null");
-    }
   }
 }

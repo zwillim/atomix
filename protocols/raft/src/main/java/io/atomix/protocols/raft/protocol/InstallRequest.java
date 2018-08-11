@@ -28,22 +28,16 @@ import static com.google.common.base.Preconditions.checkNotNull;
 /**
  * Server snapshot installation request.
  * <p>
- * Snapshot installation requests are sent by the leader to a follower when the follower indicates
- * that its log is further behind than the last snapshot taken by the leader. Snapshots are sent
- * in chunks, with each chunk being sent in a separate install request. As requests are received by
- * the follower, the snapshot is reconstructed based on the provided {@link #chunkOffset()} and other
- * metadata. The last install request will be sent with {@link #complete()} being {@code true} to
- * indicate that all chunks of the snapshot have been sent.
+ * Snapshot installation requests are sent by the leader to a follower when the follower indicates that its log is
+ * further behind than the last snapshot taken by the leader. Snapshots are sent in chunks, with each chunk being sent
+ * in a separate install request. As requests are received by the follower, the snapshot is reconstructed based on the
+ * provided {@link #chunkOffset()} and other metadata. The last install request will be sent with {@link #complete()}
+ * being {@code true} to indicate that all chunks of the snapshot have been sent.
  */
 public class InstallRequest extends AbstractRaftRequest {
 
-  /**
-   * Returns a new install request builder.
-   *
-   * @return A new install request builder.
-   */
-  public static Builder builder() {
-    return new Builder();
+  public static InstallRequest request(long term, MemberId leader, long index, long timestamp, int offset, byte[] data, boolean complete) {
+    return new InstallRequest(term, leader, index, timestamp, offset, data, complete);
   }
 
   private final long term;
@@ -54,7 +48,12 @@ public class InstallRequest extends AbstractRaftRequest {
   private final byte[] data;
   private final boolean complete;
 
-  public InstallRequest(long term, MemberId leader, long index, long timestamp, int offset, byte[] data, boolean complete) {
+  private InstallRequest(long term, MemberId leader, long index, long timestamp, int offset, byte[] data, boolean complete) {
+    checkArgument(term > 0, "term must be positive");
+    checkNotNull(leader, "leader cannot be null");
+    checkArgument(index >= 0, "index must be positive");
+    checkArgument(offset >= 0, "offset must be positive");
+    checkNotNull(data, "data cannot be null");
     this.term = term;
     this.leader = leader;
     this.index = index;
@@ -157,121 +156,4 @@ public class InstallRequest extends AbstractRaftRequest {
         .add("complete", complete)
         .toString();
   }
-
-  /**
-   * Snapshot request builder.
-   */
-  public static class Builder extends AbstractRaftRequest.Builder<Builder, InstallRequest> {
-    private long term;
-    private MemberId leader;
-    private long index;
-    private long timestamp;
-    private int offset;
-    private byte[] data;
-    private boolean complete;
-
-    /**
-     * Sets the request term.
-     *
-     * @param term The request term.
-     * @return The append request builder.
-     * @throws IllegalArgumentException if the {@code term} is not positive
-     */
-    public Builder withTerm(long term) {
-      checkArgument(term > 0, "term must be positive");
-      this.term = term;
-      return this;
-    }
-
-    /**
-     * Sets the request leader.
-     *
-     * @param leader The request leader.
-     * @return The append request builder.
-     * @throws IllegalArgumentException if the {@code leader} is not positive
-     */
-    public Builder withLeader(MemberId leader) {
-      this.leader = checkNotNull(leader, "leader cannot be null");
-      return this;
-    }
-
-    /**
-     * Sets the request index.
-     *
-     * @param index The request index.
-     * @return The request builder.
-     */
-    public Builder withIndex(long index) {
-      checkArgument(index >= 0, "index must be positive");
-      this.index = index;
-      return this;
-    }
-
-    /**
-     * Sets the request timestamp.
-     *
-     * @param timestamp The request timestamp.
-     * @return The request builder.
-     */
-    public Builder withTimestamp(long timestamp) {
-      checkArgument(timestamp >= 0, "timestamp must be positive");
-      this.timestamp = timestamp;
-      return this;
-    }
-
-    /**
-     * Sets the request offset.
-     *
-     * @param offset The request offset.
-     * @return The request builder.
-     */
-    public Builder withOffset(int offset) {
-      checkArgument(offset >= 0, "offset must be positive");
-      this.offset = offset;
-      return this;
-    }
-
-    /**
-     * Sets the request snapshot bytes.
-     *
-     * @param data The snapshot bytes.
-     * @return The request builder.
-     */
-    public Builder withData(byte[] data) {
-      this.data = checkNotNull(data, "data cannot be null");
-      return this;
-    }
-
-    /**
-     * Sets whether the request is complete.
-     *
-     * @param complete Whether the snapshot is complete.
-     * @return The request builder.
-     * @throws NullPointerException if {@code member} is null
-     */
-    public Builder withComplete(boolean complete) {
-      this.complete = complete;
-      return this;
-    }
-
-    @Override
-    protected void validate() {
-      super.validate();
-      checkArgument(term > 0, "term must be positive");
-      checkNotNull(leader, "leader cannot be null");
-      checkArgument(index >= 0, "index must be positive");
-      checkArgument(offset >= 0, "offset must be positive");
-      checkNotNull(data, "data cannot be null");
-    }
-
-    /**
-     * @throws IllegalStateException if member is null
-     */
-    @Override
-    public InstallRequest build() {
-      validate();
-      return new InstallRequest(term, leader, index, timestamp, offset, data, complete);
-    }
-  }
-
 }

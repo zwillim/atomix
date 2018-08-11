@@ -23,11 +23,10 @@ import static com.google.common.base.Preconditions.checkNotNull;
 /**
  * Client operation request.
  * <p>
- * Operation requests are sent by clients to servers to execute operations on the replicated state
- * machine. Each operation request must be sequenced with a {@link #sequenceNumber()} number. All operations
- * will be applied to replicated state machines in the sequence in which they were sent by the client.
- * Sequence numbers must always be sequential, and in the event that an operation request fails, it must
- * be resent by the client.
+ * Operation requests are sent by clients to servers to execute operations on the replicated state machine. Each
+ * operation request must be sequenced with a {@link #sequenceNumber()} number. All operations will be applied to
+ * replicated state machines in the sequence in which they were sent by the client. Sequence numbers must always be
+ * sequential, and in the event that an operation request fails, it must be resent by the client.
  */
 public abstract class OperationRequest extends SessionRequest {
   protected final long sequence;
@@ -35,6 +34,8 @@ public abstract class OperationRequest extends SessionRequest {
 
   protected OperationRequest(long session, long sequence, PrimitiveOperation operation) {
     super(session);
+    checkArgument(sequence >= 0, "sequence must be positive");
+    checkNotNull(operation, "operation cannot be null");
     this.sequence = sequence;
     this.operation = operation;
   }
@@ -55,47 +56,5 @@ public abstract class OperationRequest extends SessionRequest {
    */
   public PrimitiveOperation operation() {
     return operation;
-  }
-
-  /**
-   * Operation request builder.
-   */
-  public static abstract class Builder<T extends Builder<T, U>, U extends OperationRequest> extends SessionRequest.Builder<T, U> {
-    protected long sequence;
-    protected PrimitiveOperation operation;
-
-    /**
-     * Sets the request sequence number.
-     *
-     * @param sequence The request sequence number.
-     * @return The request builder.
-     * @throws IllegalArgumentException If the request sequence number is not positive.
-     */
-    @SuppressWarnings("unchecked")
-    public T withSequence(long sequence) {
-      checkArgument(sequence >= 0, "sequence must be positive");
-      this.sequence = sequence;
-      return (T) this;
-    }
-
-    /**
-     * Sets the request operation.
-     *
-     * @param operation The operation.
-     * @return The request builder.
-     * @throws NullPointerException if the request {@code operation} is {@code null}
-     */
-    @SuppressWarnings("unchecked")
-    public T withOperation(PrimitiveOperation operation) {
-      this.operation = checkNotNull(operation, "operation cannot be null");
-      return (T) this;
-    }
-
-    @Override
-    protected void validate() {
-      super.validate();
-      checkArgument(sequence >= 0, "sequence must be positive");
-      checkNotNull(operation, "operation cannot be null");
-    }
   }
 }

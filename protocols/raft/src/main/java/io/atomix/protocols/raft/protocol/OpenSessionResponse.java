@@ -27,20 +27,23 @@ import static com.google.common.base.Preconditions.checkArgument;
  */
 public class OpenSessionResponse extends AbstractRaftResponse {
 
-  /**
-   * Returns a new register client response builder.
-   *
-   * @return A new register client response builder.
-   */
-  public static Builder builder() {
-    return new Builder();
+  public static OpenSessionResponse ok(long session, long timeout) {
+    return new OpenSessionResponse(Status.OK, null, session, timeout);
+  }
+
+  public static OpenSessionResponse error(RaftError error) {
+    return new OpenSessionResponse(Status.ERROR, error, 0, 0);
   }
 
   protected final long session;
   protected final long timeout;
 
-  public OpenSessionResponse(Status status, RaftError error, long session, long timeout) {
+  private OpenSessionResponse(Status status, RaftError error, long session, long timeout) {
     super(status, error);
+    if (status == Status.OK) {
+      checkArgument(session > 0, "session must be positive");
+      checkArgument(timeout > 0, "timeout must be positive");
+    }
     this.session = session;
     this.timeout = timeout;
   }
@@ -93,54 +96,6 @@ public class OpenSessionResponse extends AbstractRaftResponse {
           .add("status", status)
           .add("error", error)
           .toString();
-    }
-  }
-
-  /**
-   * Register response builder.
-   */
-  public static class Builder extends AbstractRaftResponse.Builder<Builder, OpenSessionResponse> {
-    private long session;
-    private long timeout;
-
-    /**
-     * Sets the response session ID.
-     *
-     * @param session The session ID.
-     * @return The register response builder.
-     * @throws IllegalArgumentException if {@code session} is less than 1
-     */
-    public Builder withSession(long session) {
-      checkArgument(session > 0, "session must be positive");
-      this.session = session;
-      return this;
-    }
-
-    /**
-     * Sets the session timeout.
-     *
-     * @param timeout The session timeout.
-     * @return The response builder.
-     */
-    public Builder withTimeout(long timeout) {
-      checkArgument(timeout > 0, "timeout must be positive");
-      this.timeout = timeout;
-      return this;
-    }
-
-    @Override
-    protected void validate() {
-      super.validate();
-      if (status == Status.OK) {
-        checkArgument(session > 0, "session must be positive");
-        checkArgument(timeout > 0, "timeout must be positive");
-      }
-    }
-
-    @Override
-    public OpenSessionResponse build() {
-      validate();
-      return new OpenSessionResponse(status, error, session, timeout);
     }
   }
 }

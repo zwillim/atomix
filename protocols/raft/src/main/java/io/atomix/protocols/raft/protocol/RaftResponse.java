@@ -20,9 +20,9 @@ import io.atomix.protocols.raft.RaftError;
 /**
  * Base interface for responses.
  * <p>
- * Each response has a non-null {@link RaftResponse.Status} of either {@link RaftResponse.Status#OK} or
- * {@link RaftResponse.Status#ERROR}. Responses where {@link #status()} is {@link RaftResponse.Status#ERROR}
- * may provide an optional {@link #error()} code.
+ * Each response has a non-null {@link RaftResponse.Status} of either {@link RaftResponse.Status#OK} or {@link
+ * RaftResponse.Status#ERROR}. Responses where {@link #status()} is {@link RaftResponse.Status#ERROR} may provide an
+ * optional {@link #error()} code.
  */
 public interface RaftResponse extends RaftMessage {
 
@@ -89,54 +89,4 @@ public interface RaftResponse extends RaftMessage {
    * @return The response error.
    */
   RaftError error();
-
-  /**
-   * Response builder.
-   *
-   * @param <T> The builder type.
-   * @param <U> The response type.
-   */
-  interface Builder<T extends Builder<T, U>, U extends RaftResponse> extends io.atomix.utils.Builder<U> {
-
-    /**
-     * Sets the response status.
-     *
-     * @param status The response status.
-     * @return The response builder.
-     * @throws NullPointerException if {@code status} is null
-     */
-    T withStatus(Status status);
-
-    /**
-     * Sets the response error.
-     *
-     * @param type The response error type.
-     * @return The response builder.
-     * @throws NullPointerException if {@code type} is null
-     */
-    default T withError(RaftError.Type type) {
-      return withError(new RaftError(type, null));
-    }
-
-    /**
-     * Sets the response error.
-     *
-     * @param type The response error type.
-     * @param message The response error message.
-     * @return The response builder.
-     * @throws NullPointerException if {@code type} is null
-     */
-    default T withError(RaftError.Type type, String message) {
-      return withError(new RaftError(type, message));
-    }
-
-    /**
-     * Sets the response error.
-     *
-     * @param error The response error.
-     * @return The response builder.
-     * @throws NullPointerException if {@code error} is null
-     */
-    T withError(RaftError error);
-  }
 }

@@ -25,27 +25,15 @@ import java.util.Collection;
  */
 public class ReconfigureResponse extends ConfigurationResponse {
 
-  /**
-   * Returns a new reconfigure response builder.
-   *
-   * @return A new reconfigure response builder.
-   */
-  public static Builder builder() {
-    return new Builder();
+  public static ReconfigureResponse ok(long index, long term, long timestamp, Collection<RaftMember> members) {
+    return new ReconfigureResponse(Status.OK, null, index, term, timestamp, members);
   }
 
-  public ReconfigureResponse(Status status, RaftError error, long index, long term, long timestamp, Collection<RaftMember> members) {
+  public static ReconfigureResponse error(RaftError.Type error) {
+    return new ReconfigureResponse(Status.ERROR, error != null ? new RaftError(error, null) : null, 0, 0, 0, null);
+  }
+
+  private ReconfigureResponse(Status status, RaftError error, long index, long term, long timestamp, Collection<RaftMember> members) {
     super(status, error, index, term, timestamp, members);
-  }
-
-  /**
-   * Reconfigure response builder.
-   */
-  public static class Builder extends ConfigurationResponse.Builder<Builder, ReconfigureResponse> {
-    @Override
-    public ReconfigureResponse build() {
-      validate();
-      return new ReconfigureResponse(status, error, index, term, timestamp, members);
-    }
   }
 }
