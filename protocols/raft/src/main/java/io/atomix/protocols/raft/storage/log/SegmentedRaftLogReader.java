@@ -57,6 +57,7 @@ public class SegmentedRaftLogReader implements RaftLogReader<RaftLogEntry> {
    */
   private void initialize(long index) {
     currentSegment = log.getSegment(index);
+    currentSegment.acquire();
     currentReader = currentSegment.createReader();
     long nextIndex = getNextIndex();
     while (index > nextIndex && hasNext()) {
@@ -103,7 +104,9 @@ public class SegmentedRaftLogReader implements RaftLogReader<RaftLogEntry> {
   @Override
   public void reset() {
     currentReader.close();
+    currentSegment.release();
     currentSegment = log.getFirstSegment();
+    currentSegment.acquire();
     currentReader = currentSegment.createReader();
     previousEntry = null;
   }
@@ -132,7 +135,9 @@ public class SegmentedRaftLogReader implements RaftLogReader<RaftLogEntry> {
       RaftLogSegment<RaftLogEntry> segment = log.getSegment(index - 1);
       if (segment != null) {
         currentReader.close();
+        currentSegment.release();
         currentSegment = segment;
+        currentSegment.acquire();
         currentReader = currentSegment.createReader();
       }
     }
@@ -166,7 +171,9 @@ public class SegmentedRaftLogReader implements RaftLogReader<RaftLogEntry> {
       RaftLogSegment<RaftLogEntry> nextSegment = log.getNextSegment(currentSegment.index());
       if (nextSegment != null && nextSegment.index() == getNextIndex()) {
         previousEntry = currentReader.getCurrentEntry();
+        currentSegment.release();
         currentSegment = nextSegment;
+        currentSegment.acquire();
         currentReader = currentSegment.createReader();
         return currentReader.hasNext();
       }
@@ -181,7 +188,9 @@ public class SegmentedRaftLogReader implements RaftLogReader<RaftLogEntry> {
       RaftLogSegment<RaftLogEntry> nextSegment = log.getNextSegment(currentSegment.index());
       if (nextSegment != null && nextSegment.index() == getNextIndex()) {
         previousEntry = currentReader.getCurrentEntry();
+        currentSegment.release();
         currentSegment = nextSegment;
+        currentSegment.acquire();
         currentReader = currentSegment.createReader();
         return currentReader.next();
       } else {

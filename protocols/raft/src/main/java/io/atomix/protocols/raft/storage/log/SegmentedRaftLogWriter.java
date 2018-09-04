@@ -16,7 +16,6 @@
 package io.atomix.protocols.raft.storage.log;
 
 import io.atomix.protocols.raft.storage.log.entry.RaftLogEntry;
-import io.atomix.storage.StorageLevel;
 
 import java.nio.BufferOverflowException;
 
@@ -31,6 +30,7 @@ public class SegmentedRaftLogWriter implements RaftLogWriter<RaftLogEntry> {
   public SegmentedRaftLogWriter(SegmentedRaftLog log) {
     this.log = log;
     this.currentSegment = log.getLastSegment();
+    currentSegment.acquire();
     this.currentWriter = currentSegment.writer();
   }
 
@@ -57,11 +57,10 @@ public class SegmentedRaftLogWriter implements RaftLogWriter<RaftLogEntry> {
   public void reset(long index) {
     if (index > currentSegment.index()) {
       currentWriter.close();
+      currentSegment.release();
       currentSegment = log.resetSegments(index);
+      currentSegment.acquire();
       currentWriter = currentSegment.writer();
-      if (log.storageLevel() == StorageLevel.MAPPED) {
-        currentSegment.map();
-      }
     } else {
       truncate(index - 1);
     }
@@ -91,14 +90,10 @@ public class SegmentedRaftLogWriter implements RaftLogWriter<RaftLogEntry> {
         throw e;
       }
       currentWriter.flush();
-      if (log.storageLevel() == StorageLevel.MAPPED) {
-        currentSegment.unmap();
-      }
+      currentSegment.release();
       currentSegment = log.getNextSegment();
+      currentSegment.acquire();
       currentWriter = currentSegment.writer();
-      if (log.storageLevel() == StorageLevel.MAPPED) {
-        currentSegment.map();
-      }
       return currentWriter.append(entry);
     }
   }
@@ -112,14 +107,10 @@ public class SegmentedRaftLogWriter implements RaftLogWriter<RaftLogEntry> {
         throw e;
       }
       currentWriter.flush();
-      if (log.storageLevel() == StorageLevel.MAPPED) {
-        currentSegment.unmap();
-      }
+      currentSegment.release();
       currentSegment = log.getNextSegment();
+      currentSegment.acquire();
       currentWriter = currentSegment.writer();
-      if (log.storageLevel() == StorageLevel.MAPPED) {
-        currentSegment.map();
-      }
       currentWriter.append(entry);
     }
   }
@@ -132,12 +123,11 @@ public class SegmentedRaftLogWriter implements RaftLogWriter<RaftLogEntry> {
 
     // Delete all segments with first indexes greater than the given index.
     while (index < currentSegment.index() && currentSegment != log.getFirstSegment()) {
+      currentSegment.release();
       log.removeSegment(currentSegment);
       currentSegment = log.getLastSegment();
+      currentSegment.acquire();
       currentWriter = currentSegment.writer();
-      if (log.storageLevel() == StorageLevel.MAPPED) {
-        currentSegment.map();
-      }
     }
 
     // Truncate the current index.

@@ -225,10 +225,6 @@ public class SegmentedRaftLog implements RaftLog<RaftLogEntry> {
 
       segments.put(1L, currentSegment);
     }
-
-    if (storageLevel == StorageLevel.MAPPED) {
-      currentSegment.map();
-    }
   }
 
   /**
@@ -445,7 +441,7 @@ public class SegmentedRaftLog implements RaftLog<RaftLogEntry> {
    * @return The segment instance.
    */
   protected RaftLogSegment<RaftLogEntry> newSegment(RaftLogSegmentFile segmentFile, RaftLogSegmentDescriptor descriptor) {
-    return new RaftLogSegment<>(segmentFile, descriptor, maxEntrySize, indexDensity, namespace);
+    return new RaftLogSegment<>(segmentFile, descriptor, storageLevel, maxEntrySize, indexDensity, namespace);
   }
 
   /**

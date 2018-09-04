@@ -18,6 +18,7 @@ package io.atomix.protocols.raft.storage.log;
 import com.google.common.collect.Sets;
 import io.atomix.protocols.raft.storage.log.index.RaftLogIndex;
 import io.atomix.protocols.raft.storage.log.index.SparseRaftLogIndex;
+import io.atomix.storage.StorageLevel;
 import io.atomix.utils.serializer.Namespace;
 
 import java.io.File;
@@ -27,6 +28,7 @@ import java.nio.channels.FileChannel;
 import java.nio.file.Files;
 import java.nio.file.StandardOpenOption;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.google.common.base.MoreObjects.toStringHelper;
 import static com.google.common.base.Preconditions.checkState;
@@ -39,21 +41,25 @@ import static com.google.common.base.Preconditions.checkState;
 public class RaftLogSegment<E> implements AutoCloseable {
   private final RaftLogSegmentFile file;
   private final RaftLogSegmentDescriptor descriptor;
+  private final StorageLevel storageLevel;
   private final int maxEntrySize;
   private final RaftLogIndex index;
   private final Namespace namespace;
   private final MappableLogSegmentWriter<E> writer;
   private final Set<MappableLogSegmentReader<E>> readers = Sets.newConcurrentHashSet();
+  private final AtomicInteger references = new AtomicInteger();
   private boolean open = true;
 
   public RaftLogSegment(
       RaftLogSegmentFile file,
       RaftLogSegmentDescriptor descriptor,
+      StorageLevel storageLevel,
       int maxEntrySize,
       double indexDensity,
       Namespace namespace) {
     this.file = file;
     this.descriptor = descriptor;
+    this.storageLevel = storageLevel;
     this.maxEntrySize = maxEntrySize;
     this.index = new SparseRaftLogIndex(indexDensity);
     this.namespace = namespace;
@@ -141,19 +147,41 @@ public class RaftLogSegment<E> implements AutoCloseable {
   }
 
   /**
+   * Acquires a reference to the log segment.
+   */
+  void acquire() {
+    if (references.getAndIncrement() == 0 && open) {
+      map();
+    }
+  }
+
+  /**
+   * Releases a reference to the log segment.
+   */
+  void release() {
+    if (references.decrementAndGet() == 0 && open) {
+      unmap();
+    }
+  }
+
+  /**
    * Maps the log segment into memory.
    */
-  void map() {
-    MappedByteBuffer buffer = writer.map();
-    readers.forEach(reader -> reader.map(buffer));
+  private void map() {
+    if (storageLevel == StorageLevel.MAPPED) {
+      MappedByteBuffer buffer = writer.map();
+      readers.forEach(reader -> reader.map(buffer));
+    }
   }
 
   /**
    * Unmaps the log segment from memory.
    */
-  void unmap() {
-    writer.unmap();
-    readers.forEach(reader -> reader.unmap());
+  private void unmap() {
+    if (storageLevel == StorageLevel.MAPPED) {
+      writer.unmap();
+      readers.forEach(reader -> reader.unmap());
+    }
   }
 
   /**
@@ -213,6 +241,7 @@ public class RaftLogSegment<E> implements AutoCloseable {
    */
   @Override
   public void close() {
+    unmap();
     writer.close();
     readers.forEach(reader -> reader.close());
     open = false;
